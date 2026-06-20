@@ -1,5 +1,6 @@
 {
   "name": "agent-handoff",
+  "description": "Multi-agent coordination + background-wait utilities for Claude Code.",
   "owner": { "name": "Jerron", "url": "https://github.com/jerronl" },
   "plugins": [
     {
