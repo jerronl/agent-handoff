@@ -1,0 +1,11 @@
+{
+  "name": "agent-handoff",
+  "owner": { "name": "Jerron", "url": "https://github.com/jerronl" },
+  "plugins": [
+    {
+      "name": "agent-handoff",
+      "source": "./",
+      "description": "Multi-agent coordination via append-only handoff files (exact-tag point-to-point/broadcast channels + wait-for-reply) plus a generic background-wait pattern."
+    }
+  ]
+}
