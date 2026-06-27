@@ -1,0 +1,25 @@
+{
+  "description": "agent-handoff: at session start, direct the model to arm an always-on Monitor listener (monitor_handoff.sh); on every prompt, deliver any unread handoff sections as a zero-dependency backstop. Both no-op unless a .handoff_channels exists up-tree from cwd.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/arm_monitor.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/deliver_inbox.py"
+          }
+        ]
+      }
+    ]
+  }
+}

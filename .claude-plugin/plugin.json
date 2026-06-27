@@ -1,7 +1,7 @@
 {
   "name": "agent-handoff",
-  "version": "0.1.0",
-  "description": "Multi-agent coordination for Claude: append-only handoff files with exact-tag point-to-point/broadcast channels, plus a generic background-wait pattern.",
+  "version": "0.2.0",
+  "description": "Multi-agent coordination for Claude: append-only handoff files with exact-tag point-to-point/broadcast channels, a background-wait helper for a single reply, and an always-on autonomous inbox via a persistent Monitor.",
   "author": { "name": "Jerron" },
   "license": "MIT"
 }
