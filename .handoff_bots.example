@@ -1,0 +1,12 @@
+# .handoff_bots — pluggable roster for handoff_bots.sh (copy to .handoff_bots, edit).
+# One bot per line:  <name> | <pgrep_pattern> | <inbox_file> | <launch_command>
+#   pgrep_pattern / inbox_file / launch_command may be '-' to skip that capability.
+#   launch_command is eval'd — supply whatever spawns a session in YOUR environment
+#   (Windows Terminal, tmux, screen, ssh, a launcher script…). The plugin only delegates.
+#
+# Windows Terminal example:
+# docs  | monitor_inbox .*_inbox_docs | /proj/_inbox_docs.md | wt new-tab --title docs bash -lc 'cd /proj && claude'
+# tmux example:
+# build | node .*build-agent            | /proj/_inbox_build.md | tmux new-session -d -s build 'cd /proj && claude'
+# status-only (no launch here):
+# remote| ssh.*remote-agent             | /proj/_inbox_remote.md | -

@@ -37,3 +37,12 @@ out3="$(printf '{"cwd":"%s"}' "$d" | python3 "$ROOT/hooks/deliver_inbox.py")"
 assert_contains "$out3" "y->me" "deliver hook injects the new section on next prompt"
 case "$out3" in *"x->me"*) fail "deliver re-sent already-baselined section";; *) pass "deliver does not re-send baselined";; esac
 rm -rf "$d"
+
+# deliver hook inbox mode: a bare (colon-less) .handoff_channels line matches ANY section
+di="$(mktemp -d)"; printf '## [p->anyone] hello\nbody\n\n' > "$di/inbox.md"
+printf '%s\n' "$di/inbox.md" > "$di/.handoff_channels"
+printf '{"cwd":"%s"}' "$di" | python3 "$ROOT/hooks/deliver_inbox.py" >/dev/null   # baseline
+printf '## [q->anyone] second\nb2\n\n' >> "$di/inbox.md"
+outI="$(printf '{"cwd":"%s"}' "$di" | python3 "$ROOT/hooks/deliver_inbox.py")"
+assert_contains "$outI" "q->anyone" "deliver inbox mode delivers a new section with no tag"
+rm -rf "$di"

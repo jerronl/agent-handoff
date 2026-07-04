@@ -41,7 +41,7 @@ while [ -n "$d" ] && [ "$d" != "/" ]; do
 done
 
 if [ -z "$CONF" ]; then
-  DIRECTIVE="(SessionStart → agent-handoff) No \`.handoff_channels\` found from your cwd. If you coordinate via handoff files, create one (one \`file:tag\` per line, e.g. \`/abs/handoff_hub.md:.*(->|→)me\`), then arm an always-on listener: Monitor tool, persistent:true, command \`bash $MON\`. It notifies you per new message, never exits, needs no re-arm."
+  DIRECTIVE="(SessionStart → agent-handoff) No \`.handoff_channels\` found from your cwd. If you coordinate via handoff files, create one (one entry per line: \`file:tag\` for a tag-routed shared hub, e.g. \`/abs/handoff_hub.md:.*(->|→)me\`, OR a bare \`file\` for inbox mode where you own \`/abs/<you>_inbox.md\` and match any section), then arm an always-on listener: Monitor tool, persistent:true, command \`bash $MON\`. It notifies you per new message, never exits, needs no re-arm."
 elif [ "$SOURCE" = "resume" ] || [ "$SOURCE" = "compact" ]; then
   DIRECTIVE="(SessionStart → agent-handoff) resume/compact: your handoff **Monitor** is probably still running. Check TaskList; only if it's gone, re-arm it: Monitor tool, persistent:true, command \`bash $MON\`. Do NOT use run_in_background/--loop or a cron — those don't autonomously notify."
 else

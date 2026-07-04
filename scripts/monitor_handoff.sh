@@ -19,13 +19,20 @@
 #
 # Usage (run via the Monitor tool, persistent:true):
 #   monitor_handoff.sh <file>:<tag> [<file2>:<tag2> ...]
+#   monitor_handoff.sh <inbox>                    # bare file, no tag → match ANY section
 #   monitor_handoff.sh <file> <tag>              # legacy 2-arg form
 #   monitor_handoff.sh                           # no args → read ./.handoff_channels
 # <tag> may be a regex, matched inside the "## [<tag>] ..." header, e.g.
 #   '.*(->|→)me'  (a broadcast inbox that double-matches ASCII -> and unicode →).
 #
-# .handoff_channels: one `file:tag` per line ('#' comments allowed) — a per-agent
-# config so "which channels I listen to" lives in the agent's dir, not in args.
+# Receiver-centric ("inbox") mode: an entry with NO colon is a bare inbox file and
+# matches ANY `## [` section — routing is by filename (you own `<you>_inbox.md`), not
+# by tag. This both enables the simplest usage (watch your own inbox, no tag to keep in
+# sync) and removes a footgun: a no-colon line is NOT mis-parsed as an unmatchable tag.
+#
+# .handoff_channels: one entry per line ('#' comments allowed) — either `file:tag`
+# (tag-routed) or a bare `file` (inbox mode). A per-agent config so "which channels I
+# listen to" lives in the agent's dir, not in args.
 #
 # Test mode: MONITOR_HANDOFF_ONCE=1 → single detection pass (no loop, no sleep);
 # re-baselines to 0 so already-present sections count as "new". For tests.
@@ -44,7 +51,10 @@ if [ "$#" -eq 0 ]; then
   while IFS= read -r line; do
     line="${line%$'\r'}"
     case "$line" in ''|\#*) continue;; esac
-    add_pair "${line%%:*}" "${line##*:}"
+    case "$line" in
+      *:*) add_pair "${line%%:*}" "${line##*:}";;
+      *)   add_pair "$line" "";;           # bare inbox path → match ANY section
+    esac
   done < "$CONF"
 elif [ "$#" -eq 2 ] && [ "${1#*:}" = "$1" ]; then
   # legacy 2-arg form: <file> <tag>  (only when $1 has no colon)
@@ -53,13 +63,14 @@ else
   for arg in "$@"; do
     case "$arg" in
       *:*) add_pair "${arg%%:*}" "${arg##*:}";;
-      *) echo "[monitor_handoff] arg '$arg' must be <file>:<tag>" >&2; exit 2;;
+      *)   add_pair "$arg" "";;            # bare inbox path → match ANY section
     esac
   done
 fi
 [ "${#FILES[@]}" -eq 0 ] && { echo "[monitor_handoff] no file:tag pairs" >&2; exit 1; }
 
-hdr() { printf '^## \\[%s\\]' "$1"; }
+# Empty tag → match ANY section header (receiver-centric inbox mode).
+hdr() { if [ -z "$1" ]; then printf '^## \\['; else printf '^## \\[%s\\]' "$1"; fi; }
 
 # Baseline to current counts so we don't dump history on arm.
 for i in "${!FILES[@]}"; do
@@ -72,7 +83,7 @@ scan_once() {
     f="${FILES[$i]}"; t="${TAGS[$i]}"
     cur=$(grep -cE "$(hdr "$t")" "$f" 2>/dev/null || echo 0)
     if [ "${cur:-0}" -gt "${LAST[$i]:-0}" ]; then
-      echo "📨 $((cur - LAST[i])) new [$t] message(s) in $f — read its tail:"
+      echo "📨 $((cur - LAST[i])) new [${t:-inbox}] message(s) in $f — read its tail:"
       grep -E "$(hdr "$t")" "$f" 2>/dev/null | tail -n "$((cur - LAST[i]))"
       LAST[$i]="$cur"
     fi

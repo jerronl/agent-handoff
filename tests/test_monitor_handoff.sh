@@ -20,8 +20,20 @@ printf '%s\n' "$d/h.md:.*(->|→)me" > "$d/.handoff_channels"
 out3="$(cd "$d" && MONITOR_HANDOFF_ONCE=1 bash "$D/monitor_handoff.sh")"
 assert_contains "$out3" "a->me" ".handoff_channels fallback works"
 
+# inbox mode: bare file arg (no colon) matches ANY section (route by filename)
+out4="$(MONITOR_HANDOFF_ONCE=1 bash "$D/monitor_handoff.sh" "$f")"
+assert_contains "$out4" "a->me" "inbox mode matches a->me"
+assert_contains "$out4" "b->ns" "inbox mode matches b->ns (any tag)"
+assert_contains "$out4" "c->me" "inbox mode matches c->me"
+
+# inbox mode via a bare (colon-less) .handoff_channels line
+di="$(mktemp -d)"; cp "$f" "$di/inbox.md"
+printf '%s\n' "$di/inbox.md" > "$di/.handoff_channels"
+out5="$(cd "$di" && MONITOR_HANDOFF_ONCE=1 bash "$D/monitor_handoff.sh")"
+assert_contains "$out5" "b->ns" "bare .handoff_channels line = inbox mode (any section)"
+
 # no args + no .handoff_channels → error rc
 d2="$(mktemp -d)"; ( cd "$d2" && MONITOR_HANDOFF_ONCE=1 bash "$D/monitor_handoff.sh" ) 2>/dev/null
 assert_eq "$?" "1" "no args + no config → rc 1"
 
-rm -rf "$f" "$d" "$d2"
+rm -rf "$f" "$d" "$d2" "$di"

@@ -31,13 +31,13 @@ import os
 import re
 import sys
 
-ANY_HDR = re.compile(r'^## \[')
+ANY_HDR = re.compile(r"^## \[")
 
 
 def find_config(cwd):
     d = cwd or os.getcwd()
-    while d and d != '/':
-        c = os.path.join(d, '.handoff_channels')
+    while d and d != "/":
+        c = os.path.join(d, ".handoff_channels")
         if os.path.isfile(c):
             return c
         d = os.path.dirname(d)
@@ -45,7 +45,10 @@ def find_config(cwd):
 
 
 def offfile(f, tag):
-    return '/tmp/_handoff_delivered_%s_%s.off' % (os.path.basename(f), tag)
+    return "/tmp/_handoff_delivered_%s_%s.off" % (
+        os.path.basename(f),
+        tag if tag else "any",
+    )
 
 
 def read_offset(off):
@@ -58,20 +61,27 @@ def read_offset(off):
 
 def write_offset(off, count):
     try:
-        with open(off, 'w') as fh:
-            fh.write('%d\n' % count)
+        with open(off, "w") as fh:
+            fh.write("%d\n" % count)
     except Exception:
         pass
 
 
 def new_sections(f, tag):
-    """Return (list_of_new_section_texts, count_advanced_to) or (None, None) to skip."""
+    """Return (list_of_new_section_texts, count_advanced_to) or (None, None) to skip.
+
+    tag is a regex matched inside the "## [<tag>]" header; a falsy tag selects
+    receiver-centric inbox mode (match ANY section, routing by filename).
+    """
+    if tag:
+        try:
+            hdr = re.compile(r"^## \[" + tag + r"\]")
+        except re.error:
+            return None, None
+    else:
+        hdr = ANY_HDR
     try:
-        hdr = re.compile(r'^## \[' + tag + r'\]')
-    except re.error:
-        return None, None
-    try:
-        with open(f, encoding='utf-8', errors='replace') as fh:
+        with open(f, encoding="utf-8", errors="replace") as fh:
             lines = fh.readlines()
     except Exception:
         return None, None
@@ -81,32 +91,32 @@ def new_sections(f, tag):
     off = offfile(f, tag)
 
     if not os.path.exists(off):
-        write_offset(off, cur)            # genuine first-ever init -> preset once, emit nothing
+        write_offset(off, cur)  # genuine first-ever init -> preset once, emit nothing
         return None, None
 
     lc = read_offset(off)
-    if cur < lc:                          # file shrank/rotated -> resync, emit nothing
+    if cur < lc:  # file shrank/rotated -> resync, emit nothing
         write_offset(off, cur)
         return None, None
     if cur == lc:
         return None, None
 
     out = []
-    for mi in matches[lc:cur]:            # only the brand-new matching sections
+    for mi in matches[lc:cur]:  # only the brand-new matching sections
         j = mi + 1
         while j < len(lines) and not ANY_HDR.match(lines[j]):
             j += 1
-        out.append(''.join(lines[mi:j]).rstrip('\n'))
+        out.append("".join(lines[mi:j]).rstrip("\n"))
     write_offset(off, cur)
     return out, cur
 
 
 def main():
-    raw = sys.stdin.read() if not sys.stdin.isatty() else ''
+    raw = sys.stdin.read() if not sys.stdin.isatty() else ""
     try:
-        cwd = json.loads(raw).get('cwd', '') if raw else ''
+        cwd = json.loads(raw).get("cwd", "") if raw else ""
     except Exception:
-        cwd = ''
+        cwd = ""
     conf = find_config(cwd)
     if not conf:
         return 0
@@ -119,32 +129,37 @@ def main():
         return 0
 
     for line in cfg_lines:
-        line = line.rstrip('\r\n').strip()
-        if not line or line.startswith('#'):
+        line = line.rstrip("\r\n").strip()
+        if not line or line.startswith("#"):
             continue
-        f = line.split(':', 1)[0]
-        tag = line.rsplit(':', 1)[-1]
+        if ":" in line:
+            f = line.split(":", 1)[0]
+            tag = line.rsplit(":", 1)[-1]
+        else:
+            f = line  # bare inbox path → match ANY section
+            tag = None
         if not os.path.isfile(f):
             continue
         secs, cur = new_sections(f, tag)
         if secs:
             blocks.append(
-                '### 📨 新 handoff 消息 — %s (频道 tag: %s) — %d 条新 section\n%s'
-                % (f, tag, len(secs), '\n\n'.join(secs))
+                "### 📨 New handoff message(s) — %s (channel: %s) — %d new section(s)\n%s"
+                % (f, tag or "inbox", len(secs), "\n\n".join(secs))
             )
 
     if not blocks:
         return 0
 
     sys.stdout.write(
-        '📬 你有发往本频道的新 handoff 消息(UserPromptSubmit 自动投递,无需挂 watcher)。'
-        '请在回应用户前先读完、按需处理:\n\n' + '\n\n'.join(blocks) + '\n'
+        "📬 You have new handoff message(s) delivered to your inbox (auto-delivered by "
+        "the UserPromptSubmit hook — no watcher needed). Read and handle them as needed "
+        "before responding to the user:\n\n" + "\n\n".join(blocks) + "\n"
     )
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception:
-        sys.exit(0)            # never break the user's prompt
+        sys.exit(0)  # never break the user's prompt
